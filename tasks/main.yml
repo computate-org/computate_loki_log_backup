@@ -1,0 +1,57 @@
+---
+- name: |
+    Create the log backup directory: {{ LOG_BACKUP_DIR }}
+  file: 
+    path: "{{ LOG_BACKUP_DIR }}"
+    state: directory
+
+- name: Get files in a folder
+  find:
+    paths: "{{ LOG_BACKUP_DIR }}"
+  register: found_files
+
+- name: Get latest file
+  set_fact:
+    latest_file: "{{ (found_files.files | default([])) | sort(attribute='mtime',reverse=true) | first | default(None) }}"
+- debug:
+    msg: |-
+      LOG_START_ISO8601: {{ LOG_START_ISO8601 }}
+- debug:
+    msg: |-
+      LOG_END_ISO8601: {{ LOG_END_ISO8601 }}
+- debug:
+    msg: |-
+      LOG_START_NANOS: {{ LOG_START_NANOS }}
+- debug:
+    msg: |-
+      LOG_END_NANOS: {{ LOG_END_NANOS }}
+
+- name: Get logs
+  shell: >-
+    curl -H "Authorization: Bearer $(oc --as system:admin -n openshift-logging get secret/logcollector-token -o jsonpath='{.data.token}' | base64 -d)" "https://logging-loki-openshift-logging.apps.nerc-ocp-infra.rc.fas.harvard.edu/api/logs/v1/{{ LOKI_LOG_TYPE }}/loki/api/v1/query_range?query=%7B+log_type%3D%7E%22.%2B%22+%7D+%7C+json&start={{ LOG_START_NANOS }}&end={{ LOG_END_NANOS }}&limit={{ LOG_LIMIT }}"
+  register: LOG_DATA
+- debug:
+    var: LOG_DATA
+- set_fact:
+    LOG_DATA_JSON: "{{ LOG_DATA.stdout | from_json }}"
+- name: Get log date
+  shell: >-
+    date -d"{{ LOG_DATA_JSON.data.result[0].stream._timestamp }}" '+%s%N'
+  register: LOG_DATA_DATE_CMD
+- set_fact:
+    LOG_DATA_DATE: "{{ LOG_DATA_DATE_CMD.stdout }}"
+- copy:
+    content: "{{ LOG_DATA_JSON }}"
+    dest: "{{ LOG_BACKUP_DIR }}/{{ LOG_DATA_DATE }}.log"
+  when: LOG_DATA_JSON.data.result | length > 0
+#- name: Request {{DATA_NAME_VAR}} data
+#  shell: "curl -X GET -H 'Authorization: Bearer {{(AUTH_TOKEN.stdout | from_json).access_token}}' '{{SOUTHERNCOALITION_SITE_BASE_URL_ENUS}}{{DATA_URI}}?rows=0'"
+#  register: REQUEST_DATA
+#- debug: 
+#    var: AUTH_TOKEN
+#- debug: 
+#    var: REQUEST_DATA
+#- name: Request and encrypt the {{DATA_NAME_VAR}} response data
+#  shell: "curl -X GET -H 'Authorization: Bearer {{(AUTH_TOKEN.stdout | from_json).access_token}}' '{{SOUTHERNCOALITION_SITE_BASE_URL_ENUS}}{{DATA_URI}}?fl=saves&rows={{DATA_ROWS}}&start={{item}}' > '{{SOUTHERNCOALITION_BACKUP_DIR_ENUS}}/{{DATA_NAME_VAR}}{{item}}.json'"
+#  with_sequence: "start=0 end={{(REQUEST_DATA.stdout | from_json).foundNum}} stride={{DATA_ROWS}}"
+

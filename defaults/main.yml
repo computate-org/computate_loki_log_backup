@@ -1,0 +1,19 @@
+---
+LOKI_LOG_TYPE: application
+LOG_BACKUP_DIR: /tmp/loki_log_backup/{{ LOKI_LOG_TYPE }}
+ANSIBLE_DATE_TIME: "{{ ansible_date_time }}"
+
+# Defaults to 1 week ago
+LOG_DAYS_BACK: 7
+# Max number of logs to return on each query
+LOG_LIMIT: 1
+
+# Format: 2023-03-20T14:44:30.345143000Z
+LOG_START_ISO8601: "{{ '%Y-%m-%dT%H:%M:%S' | strftime(ANSIBLE_DATE_TIME.epoch|int - (LOG_DAYS_BACK * 86400)) }}.{{ ANSIBLE_DATE_TIME.iso8601_micro | split('.') | last | split('Z') | first }}000Z"
+# Format: 1679345070345143000
+LOG_START_NANOS: "{{ ANSIBLE_DATE_TIME.epoch|int - (LOG_DAYS_BACK * 86400) }}{{ ANSIBLE_DATE_TIME.iso8601_micro | split('.') | last | split('Z') | first }}000"
+
+# Format: 2023-03-27T14:44:30.345143000Z
+LOG_END_ISO8601: "{{ '%Y-%m-%dT%H:%M:%S' | strftime(ANSIBLE_DATE_TIME.epoch) }}.{{ ANSIBLE_DATE_TIME.iso8601_micro | split('.') | last | split('Z') | first }}000Z"
+# Format: 1679949870345143000
+LOG_END_NANOS: "{{ ANSIBLE_DATE_TIME.epoch }}{{ ANSIBLE_DATE_TIME.iso8601_micro | split('.') | last | split('Z') | first }}000"

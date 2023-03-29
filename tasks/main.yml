@@ -6,23 +6,6 @@
     path: "{{ LOG_BACKUP_DIR }}"
     state: directory
 
-- name: Get LOG_START_ISO8601 date
-  shell: >-
-    date -u -d '{{ LOG_DURATION }} ago' '+%FT%T.%NZ'
-  register: LOG_START_ISO8601_CMD
-- name: Get LOG_END_ISO8601 date
-  shell: >-
-    date -u '+%FT%T.%NZ'
-  register: LOG_END_ISO8601_CMD
-- name: Get LOG_START_NANOS date
-  shell: >-
-    date -d '{{ LOG_START_ISO8601_CMD.stdout }}' '+%s%N'
-  register: LOG_START_NANOS_CMD
-- name: Get LOG_END_NANOS date
-  shell: >-
-    date -d '{{ LOG_END_ISO8601_CMD.stdout }}' '+%s%N'
-  register: LOG_END_NANOS_CMD
-
 - name: Get files in a folder
   find:
     paths: "{{ LOG_BACKUP_DIR }}"
@@ -30,8 +13,46 @@
 
 - name: Get latest file
   set_fact:
-    latest_file: "{{ (found_files.files | default([])) | sort(attribute='mtime',reverse=true) | first | default(None) }}"
+    latest_file: "{{ (found_files.files | default([])) | sort(attribute='path') | last | default(None) }}"
     LOOP_COUNTER: []
+- debug:
+    var: found_files
+- debug:
+    var: latest_file
+
+- name: Set LOG_DURATION if no log file found
+  set_fact:
+    LOG_DURATION: 1 hour
+  when: LOG_DURATION is not defined and not latest_file
+
+- name: Get LOG_START_ISO8601 date from duration
+  shell: >-
+    date -u -d '{{ LOG_DURATION }} ago' '+%FT%T.%NZ'
+  register: LOG_START_ISO8601_CMD
+  when: LOG_DURATION is defined
+- name: Get last previous log
+  shell: |
+    cat {{ latest_file.path }}
+  register: LATEST_LOG_FILE_REGISTER
+  when: LOG_DURATION is not defined
+- name: Get current LOG_START_ISO8601_CMD from previous logs
+  set_fact:
+     LOG_START_ISO8601_CMD:
+       stdout: "{{ ((LATEST_LOG_FILE_REGISTER.stdout | from_json) | last)._timestamp }}"
+  when: LOG_DURATION is not defined
+
+- name: Get LOG_END_ISO8601 date
+  shell: >-
+    date -u '+%FT%T.%NZ'
+  register: LOG_END_ISO8601_CMD
+- name: Get LOG_START_NANOS date from duration
+  shell: >-
+    date -d '{{ LOG_START_ISO8601_CMD.stdout }}' '+%s%N'
+  register: LOG_START_NANOS_CMD
+- name: Get LOG_END_NANOS date
+  shell: >-
+    date -d '{{ LOG_END_ISO8601_CMD.stdout }}' '+%s%N'
+  register: LOG_END_NANOS_CMD
 
 - copy:
     content: |
@@ -45,4 +66,3 @@
 - name: Get logs
   include_role:
     name: computate.computate_loki_log_backup_query
-  

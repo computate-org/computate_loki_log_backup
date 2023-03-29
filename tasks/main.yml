@@ -1,4 +1,5 @@
 ---
+
 - name: |
     Create the log backup directory: {{ LOG_BACKUP_DIR }}
   file: 
@@ -7,7 +8,7 @@
 
 - name: Get LOG_START_ISO8601 date
   shell: >-
-    date -u -d '{{ LOG_HOURS_BACK }} hours ago' '+%FT%T.%NZ'
+    date -u -d '{{ LOG_DURATION }} ago' '+%FT%T.%NZ'
   register: LOG_START_ISO8601_CMD
 - name: Get LOG_END_ISO8601 date
   shell: >-

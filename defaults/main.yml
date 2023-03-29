@@ -1,15 +1,16 @@
 ---
-LOKI_LOG_TYPE: application
+LOKI_LOG_TYPE: "{{ lookup('env', 'LOKI_LOG_TYPE') | default('application', True) }}"
 LOKI_TOKEN: "{{ lookup('env', 'LOKI_TOKEN') | default(None) }}"
 LOKI_BASE_URL: "{{ lookup('env', 'LOKI_BASE_URL') | default(None) }}"
-LOKI_TIMEOUT_SECONDS: 300
-LOG_BACKUP_DIR: /tmp/loki_log_backup/{{ LOKI_LOG_TYPE }}
-LOG_END_NANOS_FILE: /tmp/LOG_END_NANOS.txt
-ANSIBLE_DATE_TIME: "{{ ansible_date_time }}"
+LOKI_TIMEOUT_SECONDS: "{{ lookup('env', 'LOKI_TIMEOUT_SECONDS') | default('300', True) }}"
+LOG_BACKUP_DIR: "{{ lookup('env', 'LOG_BACKUP_DIR') | default('/tmp/loki_log_backup/' + LOKI_LOG_TYPE, True) }}"
+LOG_END_NANOS_FILE: "{{ lookup('env', 'LOG_END_NANOS_FILE') | default('/tmp/LOG_END_NANOS.txt', True) }}"
 
-LOG_CONFIG_FILE: /tmp/computate_loki_log_backup.yml
+LOG_CONFIG_FILE: "{{ lookup('env', 'LOG_CONFIG_FILE') | default('/tmp/computate_loki_log_backup.yml', True) }}"
 
-# Defaults to 1 week ago
-LOG_HOURS_BACK: 1
+# Defaults to 1 hour ago
+LOG_DURATION: "{{ lookup('env', 'LOG_DURATION') | default('1 hour', True) }}"
 # Max number of logs to return on each query
-LOG_LIMIT: 5000
+LOG_LIMIT: "{{ lookup('env', 'LOG_LIMIT') | default('5000', True) }}"
+LOKI_QUERY_RETRIES: "{{ lookup('env', 'LOKI_QUERY_RETRIES') | default('3', True) }}"
+LOKI_QUERY_RETRIES_DELAY_SECONDS: "{{ lookup('env', 'LOKI_QUERY_RETRIES_DELAY_SECONDS') | default('30', True) }}"
